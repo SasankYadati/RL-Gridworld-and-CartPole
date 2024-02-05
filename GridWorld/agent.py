@@ -5,7 +5,7 @@ from grid_world import STATES, ACTIONS
 from utils import sampleFromDistribution
 
 class Agent:
-    def __init__(self, n_states, n_actions, gamma=0.9, sigma=0.1):
+    def __init__(self, n_states, n_actions, sigma, gamma=0.9):
         self.gamma = gamma
         self.sigma = sigma
         self.n_states = n_states
@@ -15,6 +15,12 @@ class Agent:
     def getPolicy(self):
         pi = F.softmax(self.sigma * self.theta, dim=1)
         return pi
+    
+    def sampleTheta(self):
+        return t.normal(self.theta, self.sigma * t.ones_like(self.theta))
+
+    def updateTheta(self, theta):
+        self.theta = theta
 
     def getAction(self, state):
         pi = self.getPolicy()
@@ -22,16 +28,16 @@ class Agent:
         a = sampleFromDistribution(action_probs)
         return a
 
-    def run_episode(self, env:GridWorld):
-        state, rew = env.reset()
-        tot_return = rew
-        done = False
-        while not done:
-            action = self.getAction(state)
-            next_state, rew, done = env.step(action)
-            tot_return += rew
-            state = next_state
-        return tot_return
+def run_episode(agent, env:GridWorld):
+    state, rew = env.reset()
+    tot_return = rew
+    done = False
+    while not done:
+        action = agent.getAction(state)
+        next_state, rew, done = env.step(action)
+        tot_return += rew
+        state = next_state
+    return tot_return
 
 
 if __name__ == '__main__':
