@@ -1,6 +1,6 @@
 import torch as t
 from utils import sampleFromDistribution
-
+t.random.manual_seed(42)
 GRID_SZ = 5
 
 UP = 0
