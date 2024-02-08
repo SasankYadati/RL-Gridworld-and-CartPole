@@ -59,7 +59,7 @@ class GridWorld:
     def isOutOfGrid(state:int):
         return state not in STATES.keys()
 
-    def transition_probs(self, state:int, action:int):
+    def getTransitionProbs(self, state:int, action:int):
         p = t.zeros(len(STATES))
         p[state] = 0.1
         intended_next_s = intended_next_state(state, action)
@@ -96,18 +96,26 @@ class GridWorld:
         return self.current_state, 0
 
     def step(self, action):
-        trans_probs = self.transition_probs(self.current_state, action)
+        trans_probs = self.getTransitionProbs(self.current_state, action)
         next_state = sampleFromDistribution(trans_probs)
         next_reward = self.getRewardForEnteringState(next_state)
         done = next_state == self.goal_state
         self.current_state = next_state
         return next_state, next_reward, done
+    
+    def getTransistionFn(self):
+        T = t.empty(len(STATES), len(ACTIONS), len(STATES))
+        for s in STATES.keys():
+            for a in ACTIONS.keys():
+                T[s][a] = self.getTransitionProbs(s, a)
+        
+        return T
 
 if __name__ == '__main__':
     gw = GridWorld()
 
     # basic test from problem description
-    probs = gw.transition_probs(getStateID(1,1), RIGHT)
+    probs = gw.getTransitionProbs(getStateID(1,1), RIGHT)
     assert probs.sum() == 1.0
     assert probs[getStateID(2,1)] == 0.8
     assert probs[getStateID(1,0)] == 0.05
@@ -115,7 +123,7 @@ if __name__ == '__main__':
     assert probs[getStateID(1,1)] == 0.1
 
     # test 2
-    probs = gw.transition_probs(getStateID(1,2), UP)
+    probs = gw.getTransitionProbs(getStateID(1,2), UP)
     assert probs.sum() == 1.0
     assert probs[getStateID(0,2)] == 0.05
     assert probs[getStateID(1,2)] == 0.15
@@ -123,12 +131,19 @@ if __name__ == '__main__':
 
     
     # test 3
-    probs = gw.transition_probs(getStateID(0,0), UP)
+    probs = gw.getTransitionProbs(getStateID(0,0), UP)
     assert probs.sum() == 1.0
     assert probs[getStateID(0,0)] == 0.15
     assert probs[getStateID(0,1)] == 0.8
     assert probs[getStateID(1,0)] == 0.05
 
+    # test 4
+    T = gw.getTransistionFn()
+    assert T[getStateID(1,1)][RIGHT].sum() == 1.0
+    assert T[getStateID(1,1)][RIGHT][getStateID(2,1)] == 0.8
+    assert T[getStateID(1,1)][RIGHT][getStateID(1,0)] == 0.05
+    assert T[getStateID(1,1)][RIGHT][getStateID(1,2)] == 0.05
+    assert T[getStateID(1,1)][RIGHT][getStateID(1,1)] == 0.1
 
     '''
     20  21  22  23  24

@@ -1,3 +1,4 @@
+import einops
 import torch as t
 import torch.nn.functional as F
 from grid_world import GridWorld
@@ -6,7 +7,14 @@ from utils import sampleFromDistribution, EpisodeInformation
 
 t.random.manual_seed(42)
 
-class ParameterizedPolicyAgent:
+class Agent:
+    def __init__(self):
+        pass
+
+    def getAction(self, state):
+        pass
+
+class ParameterizedPolicyAgent(Agent):
     def __init__(self, n_states, n_actions, sigma, gamma=0.9):
         self.gamma = gamma
         self.sigma = sigma
@@ -60,6 +68,33 @@ class ParameterizedPolicyAgent:
         return results
 
 
+class ValueIterationAgent(Agent):
+    def __init__(self, n_states:int, n_actions:int, gamma:float, theta:float, terminal_states:[int], transition_fn, reward_fn):
+        self.gamma = gamma
+        self.n_states = n_states
+        self.n_actions = n_actions        
+        self.V = t.randn(n_states)
+        self.V[terminal_states] = 0.0
+        self.transition_fn = transition_fn
+        self.reward_fn = reward_fn
+        self.V = self.valueIteration(self.V, self.transition_fn, self.reward_fn, self.gamma, self.theta)
+        self.pi = self.getPolicy(self.V, self.transition_fn, self.reward_fn, self.gamma)
+
+    def valueIteration(self, V, T, R, gamma, theta):
+        delta = 0
+        while delta > theta:
+            V_prev = V
+            V = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a").max(axis=1)
+            delta = max(delta, (V_prev - V).abs().max())
+        return V
+
+    def getPolicy(self, V, T, R, gamma):
+        pi = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a").argmax(dim=1)
+        return pi
+
+    def getAction(self, state):
+        return self.pi[state]
+
 def run_episode(agent, env:GridWorld):
     state, rew = env.reset()
     tot_return = rew
@@ -80,6 +115,9 @@ if __name__ == '__main__':
     eps = 0.001
     assert abs(pi.sum().item() - n_states) <= eps 
     
+    transistion_fn = t.empty(n_states, n_actions, n_states)
+    reward_fn = t.empty(n_states, n_actions, n_states)
+
     '''
     20  21  22  23  24
     15  16  17  18  19
