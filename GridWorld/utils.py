@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import torch as t
 
-t.random.manual_seed(42)
+g = t.random.manual_seed(42)
 
 def sampleFromDistribution(probs:t.Tensor):
     assert len(probs.shape) == 1
@@ -9,7 +9,7 @@ def sampleFromDistribution(probs:t.Tensor):
     return (t.rand(1) > probs).sum(dim=-1).item()
 
 @dataclass
-class EpisodeInformation:
+class HillSearchResult:
     Episode: int
     Trial: int
     Return: float

@@ -3,7 +3,7 @@ import torch as t
 import torch.nn.functional as F
 from grid_world import GridWorld
 from grid_world import STATES, ACTIONS
-from utils import sampleFromDistribution, EpisodeInformation
+from utils import sampleFromDistribution, HillSearchResult
 
 t.random.manual_seed(42)
 
@@ -38,12 +38,12 @@ class ParameterizedPolicyAgent(Agent):
         a = sampleFromDistribution(action_probs)
         return a
     
-    def hillSearch(self, n_episodes:int, n_trials:int) -> list[EpisodeInformation]: 
+    def hillSearch(self, n_episodes:int, n_trials:int) -> list[HillSearchResult]: 
         results = []
         tot_g = 0
         for i in range(n_episodes):
             G = run_episode(self, GridWorld())
-            results.append(EpisodeInformation(i, 1, G, self.sigma, n_episodes, n_trials))
+            results.append(HillSearchResult(i, 1, G, self.sigma, n_episodes, n_trials))
             tot_g += G
 
         max_G_so_far = tot_g / n_episodes
@@ -56,7 +56,7 @@ class ParameterizedPolicyAgent(Agent):
             tot_g = 0
             for i in range(n_episodes):
                 G = run_episode(self, GridWorld())
-                results.append(EpisodeInformation(i, trial+1, G, self.sigma, n_episodes, n_trials))
+                results.append(HillSearchResult(i, trial+1, G, self.sigma, n_episodes, n_trials))
                 tot_g += G
             self.theta = theta
 
@@ -69,24 +69,29 @@ class ParameterizedPolicyAgent(Agent):
 
 
 class ValueIterationAgent(Agent):
-    def __init__(self, n_states:int, n_actions:int, gamma:float, theta:float, terminal_states:[int], transition_fn, reward_fn):
-        self.gamma = gamma
+    def __init__(self, n_states:int, n_actions:int, gamma:float, theta:float, terminal_states:list[int], transition_fn, reward_fn):
         self.n_states = n_states
         self.n_actions = n_actions        
+        self.gamma = gamma
+        self.theta = theta
         self.V = t.randn(n_states)
         self.V[terminal_states] = 0.0
         self.transition_fn = transition_fn
         self.reward_fn = reward_fn
-        self.V = self.valueIteration(self.V, self.transition_fn, self.reward_fn, self.gamma, self.theta)
+        self.V = self.valueIteration(self.V, self.transition_fn, self.reward_fn, self.gamma, self.theta, terminal_states)
         self.pi = self.getPolicy(self.V, self.transition_fn, self.reward_fn, self.gamma)
 
-    def valueIteration(self, V, T, R, gamma, theta):
-        delta = 0
-        while delta > theta:
-            V_prev = V
-            V = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a").max(axis=1)
-            delta = max(delta, (V_prev - V).abs().max())
-        return V
+    def valueIteration(self, V, T, R, gamma, theta, terminal_states):
+        i = 0
+        while True:
+            V_prev = V.clone()
+            V_temp = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a")
+            V = V_temp.max(axis=1).values
+            # V[terminal_states] = 0
+            i += 1
+            if t.max(t.abs(V_prev - V)) < theta:
+                print(i, V)
+                return V
 
     def getPolicy(self, V, T, R, gamma):
         pi = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a").argmax(dim=1)

@@ -52,6 +52,15 @@ class GridWorld:
         else:
             return 0.0
         
+    def getRewardFn(self) -> t.Tensor:
+        R = t.zeros(len(STATES), len(ACTIONS), len(STATES))
+        for state in STATES.keys():
+            for action in ACTIONS.keys():
+                for state_ in STATES.keys():
+                    R[state, action, state_] = self.getRewardForEnteringState(state_)
+        R[self.goal_state, :, self.goal_state] = 0
+        return R
+        
     def isBlockedState(self, state:int):
         return state == self.blocked_state_1 or state == self.blocked_state_2
 
@@ -60,7 +69,13 @@ class GridWorld:
         return state not in STATES.keys()
 
     def getTransitionProbs(self, state:int, action:int):
+        if state == self.goal_state:
+            p = t.zeros(len(STATES))
+            p[state] = 1.0
+            return p
+        
         p = t.zeros(len(STATES))
+
         p[state] = 0.1
         intended_next_s = intended_next_state(state, action)
         if GridWorld.isOutOfGrid(intended_next_s):
@@ -144,6 +159,12 @@ if __name__ == '__main__':
     assert T[getStateID(1,1)][RIGHT][getStateID(1,0)] == 0.05
     assert T[getStateID(1,1)][RIGHT][getStateID(1,2)] == 0.05
     assert T[getStateID(1,1)][RIGHT][getStateID(1,1)] == 0.1
+
+    # test 5
+    probs = gw.getTransitionProbs(getStateID(4,4), UP)
+    assert probs.sum() == 1.0
+    print(probs)
+    assert probs[getStateID(4,4)] == 1.0
 
     '''
     20  21  22  23  24
