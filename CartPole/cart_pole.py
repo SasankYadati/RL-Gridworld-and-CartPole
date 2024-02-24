@@ -1,9 +1,10 @@
 from math import pi as PI
 import math
 from dataclasses import dataclass
+import torch as t
 
 G = 9.8
-STEP = 1.0/50.0
+STEP = 0.02
 
 @dataclass
 class State:
@@ -15,6 +16,9 @@ class State:
 
     def getList(self):
         return [self.x, self.x_dot, self.theta, self.theta_dot, self.t]
+
+    def getTensor(self):
+        return t.tensor(self.getList(), dtype=t.float32)
 
 INITIAL_STATE = State(0, 0, 0, 0, 0)
 
@@ -49,6 +53,16 @@ class CartPole:
 
     def isDone(self, state:State) -> bool:
         x, _, theta, _, t = state.getList()
+        # if (x < X_RANGE[0] or x > X_RANGE[1]):
+        #     print("x out of range")
+
+        # if (theta < THETA_RANGE[0] or theta > THETA_RANGE[1]):
+        #     print("theta out of range")
+
+        # if (t >= 20.0):
+        #     print("out of time")
+
+
         return (
             (x < X_RANGE[0] or x > X_RANGE[1]) or
             (theta < THETA_RANGE[0] or theta > THETA_RANGE[1]) or
@@ -56,10 +70,14 @@ class CartPole:
         )
 
     def clipVelocity(self, x_dot):
-        return min(max(x_dot, V_RANGE[0]), V_RANGE[1])
+        clipped_v = min(max(x_dot, V_RANGE[0]), V_RANGE[1])
+        # if x_dot != clipped_v: print(f"vel clipped from {x_dot} to {clipped_v}")
+        return clipped_v
     
     def clipAngVelocity(self, theta_dot):
-        return min(max(theta_dot, THETA_V_RANGE[0]), THETA_V_RANGE[1])
+        clipped_theta_v = min(max(theta_dot, THETA_V_RANGE[0]), THETA_V_RANGE[1])
+        # if theta_dot != clipped_theta_v: print(f"ang vel clipped from {theta_dot} to {clipped_theta_v}")
+        return clipped_theta_v
 
     def transition_fn(self, state:State, action:int) -> State:
         assert action in ACTIONS.keys()
@@ -84,13 +102,33 @@ class CartPole:
 
         t += STEP
 
+        # print(f"step {t}, s {State(x, x_dot, theta, theta_dot, t)}")
+
         return State(x, x_dot, theta, theta_dot, t)
 
 
     def step(self, action:int) -> tuple[State, float, bool]:
         self.state = self.transition_fn(self.state, action)
         is_done = self.isDone(self.state)
-        return self.state, 1.0, is_done
+        return self.state, REWARD, is_done
+
+    def reset(self) -> State:
+        self.state = INITIAL_STATE
+        return INITIAL_STATE, REWARD
         
 if __name__ == '__main__':
-    pass
+    env = CartPole()
+    
+    tot_r = 0.0
+    done = False
+    s, r = env.reset()
+    i = 0
+    j = 0
+    while not done:
+        tot_r += r
+        i = i ^ 1
+        j = j ^ 1 if i == 0 else j
+        action = LEFT if j == 0 else RIGHT
+        s, r, done = env.step(action)
+    
+    print(f"tot_return {tot_r}")

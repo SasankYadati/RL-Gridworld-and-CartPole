@@ -19,5 +19,9 @@ It took about 50 iterations to converge using a $\epsilon$ (error-threshold) of 
 
 
 ![Comparison of optimal policies b/w Parameterized Policy agent and Value Iteration agent](/GridWorld/avg_return_both_agents.png)
+
 ## Cartpole
 
+### Parameterized Gradient Ascent
+
+### Cross Entropy Method
