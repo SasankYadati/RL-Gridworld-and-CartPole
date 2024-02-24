@@ -20,7 +20,7 @@ class ParameterizedPolicyAgent(Agent):
         self.sigma = sigma
         self.n_states = n_states
         self.n_actions = n_actions        
-        self.theta = t.randn(n_states, n_actions) # is this correct initialization
+        self.theta = t.randn(n_states, n_actions)
 
     def getPolicy(self):
         pi = F.softmax(self.sigma * self.theta, dim=1)
@@ -87,7 +87,6 @@ class ValueIterationAgent(Agent):
             V_prev = V.clone()
             V_temp = einops.einsum(T, R + gamma * V, "s a s1, s a s1 -> s a")
             V = V_temp.max(axis=1).values
-            # V[terminal_states] = 0
             i += 1
             if t.max(t.abs(V_prev - V)) < theta:
                 print(i, V)
@@ -98,7 +97,7 @@ class ValueIterationAgent(Agent):
         return pi
 
     def getAction(self, state):
-        return self.pi[state]
+        return self.pi[state].item()
 
 def run_episode(agent, env:GridWorld):
     state, rew = env.reset()
@@ -110,6 +109,22 @@ def run_episode(agent, env:GridWorld):
         tot_return += rew
         state = next_state
     return tot_return
+
+def run_trial(agent, env, n_episodes):
+    returns = []
+    for _ in range(n_episodes):
+        returns.append(run_episode(agent, env))
+    return returns
+
+def run_exp(agent, env, n_trials, n_episodes):
+    avg_returns = []
+    std_returns = []
+    for _ in range(n_trials):
+        returns = run_trial(agent, env, n_episodes)
+        std, mean = t.std_mean(t.tensor(returns))
+        avg_returns.append(mean.item())
+        std_returns.append(std.item())
+    return avg_returns, std_returns
 
 
 if __name__ == '__main__':

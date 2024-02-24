@@ -69,12 +69,10 @@ class GridWorld:
         return state not in STATES.keys()
 
     def getTransitionProbs(self, state:int, action:int):
-        if state == self.goal_state:
-            p = t.zeros(len(STATES))
+        p = t.zeros(len(STATES))
+        if state == self.goal_state or self.isBlockedState(state):
             p[state] = 1.0
             return p
-        
-        p = t.zeros(len(STATES))
 
         p[state] = 0.1
         intended_next_s = intended_next_state(state, action)

@@ -13,16 +13,16 @@ class State:
     theta_dot: float
     t: float
 
-    def getTuple(self):
-        return (self.x, self.x_dot, self.theta, self.theta_dot, self.t)
+    def getList(self):
+        return [self.x, self.x_dot, self.theta, self.theta_dot, self.t]
 
 INITIAL_STATE = State(0, 0, 0, 0, 0)
 
 F = 10 #Newton
-cart_mass = 1 #kg
-pole_mass = 0.1 #kg
+CART_MASS = 1 #kg
+POLE_MASS = 0.1 #kg
 
-pole_len = 1
+POLE_LEN = 1
 
 X_RANGE = (-3, 3)
 V_RANGE = (-10, 10)
@@ -40,15 +40,15 @@ REWARD = 1.0
 class CartPole:
     def __init__(self):
         self.g = G
-        self.mc = cart_mass
-        self.mp = pole_mass
-        self.l = pole_len
+        self.mc = CART_MASS
+        self.mp = POLE_MASS
+        self.l = POLE_LEN
         self.F = F
         self.state = INITIAL_STATE
         self.delta_t = STEP
 
     def isDone(self, state:State) -> bool:
-        x, _, theta, _, t = state.getTuple()
+        x, _, theta, _, t = state.getList()
         return (
             (x < X_RANGE[0] or x > X_RANGE[1]) or
             (theta < THETA_RANGE[0] or theta > THETA_RANGE[1]) or
@@ -63,7 +63,7 @@ class CartPole:
 
     def transition_fn(self, state:State, action:int) -> State:
         assert action in ACTIONS.keys()
-        x, x_dot, theta, theta_dot, t = state.getTuple()
+        x, x_dot, theta, theta_dot, t = state.getList()
 
         F = ACTIONS[action] * self.F
         costheta = math.cos(theta)
