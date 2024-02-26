@@ -18,7 +18,7 @@ class State:
         return [self.x, self.x_dot, self.theta, self.theta_dot, self.t]
 
     def getTensor(self):
-        return t.tensor(self.getList(), dtype=t.float32)
+        return t.tensor(self.getList(), dtype=t.float64)
 
 INITIAL_STATE = State(0, 0, 0, 0, 0)
 
