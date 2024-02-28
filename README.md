@@ -24,4 +24,8 @@ It took about 50 iterations to converge using a $\epsilon$ (error-threshold) of 
 
 ### Parameterized Gradient Ascent
 
+Tried three different $\sigma$ values ```(0.1, 0.3, 0.9)```. $\sigma=0.9$ gives the best convergence both in terms of reward and speed of convergence.
+
+![Performance using various sigma](/CartPole/Parameterized%20Policy%20Search.png)
+
 ### Cross Entropy Method

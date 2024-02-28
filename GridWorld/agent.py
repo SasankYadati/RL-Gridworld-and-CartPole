@@ -15,8 +15,7 @@ class Agent:
         pass
 
 class ParameterizedPolicyAgent(Agent):
-    def __init__(self, n_states, n_actions, sigma, gamma=0.9):
-        self.gamma = gamma
+    def __init__(self, n_states, n_actions, sigma):
         self.sigma = sigma
         self.n_states = n_states
         self.n_actions = n_actions        

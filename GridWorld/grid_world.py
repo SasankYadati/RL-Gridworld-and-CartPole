@@ -71,7 +71,7 @@ class GridWorld:
     def getTransitionProbs(self, state:int, action:int):
         p = t.zeros(len(STATES))
         if state == self.goal_state or self.isBlockedState(state):
-            p[state] = 1.0
+            # p[state] = 1.0
             return p
 
         p[state] = 0.1
