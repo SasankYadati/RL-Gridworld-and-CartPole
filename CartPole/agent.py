@@ -89,48 +89,68 @@ class ParameterizedPolicyAgent(Agent):
 
 
 class CrossEntropyAgent(Agent):
-    def __init__(self, K, K_eps, eps, n_state_attributes=5):
+    def __init__(self, K, K_eps, eps, n_state_attributes=5, n_actions=2):
         self.K = K
-        self.eps = eps
         self.K_eps = K_eps
-        self.theta = t.randn(n_state_attributes) # +1 for bias
-        self.sigma = 2*t.eye(self.theta.shape)
+        self.eps = eps
+        self.n_state_attributes = n_state_attributes
+        self.theta = t.randn(n_state_attributes, dtype=t.float64)
+        self.sigma = 2*t.eye(n_state_attributes, dtype=t.float64)
+        print(self.sigma.shape)
 
     def getAction(self, state:State):
         s = state.getTensor()
-        f_s = s * self.theta
+        f_s = (self.theta @ s).sum()
         pi_s = F.sigmoid(f_s)
         return LEFT if pi_s < 0.5 else RIGHT
 
     def sampleTheta(self):
-        return t.normal(self.theta, self.sigma)
+        d = t.distributions.MultivariateNormal(self.theta, self.sigma)
+        return d.sample()
     
     def getMeanAdjustedTheta(self, top_thetas, theta_avg):
-        meanAdjTheta = t.zeros_like(theta_avg.shape)
+        meanAdjTheta = t.zeros_like(theta_avg)
         for theta in top_thetas:
             meanAdjTheta += (theta - theta_avg) @ (theta - theta_avg).T
         return meanAdjTheta
 
     def updateSigma(self, top_thetas):
-        theta_avg = t.tensor(top_thetas).mean(dim=0)
+        top_thetas = t.stack(top_thetas)
+        theta_avg = top_thetas.mean(axis=0)
+
         assert theta_avg.shape == self.theta.shape
-        self.sigma = (1/(self.eps + self.K_eps)) * (
-            self.eps * 2 * t.eye(self.theta.shape) +
+        new_sigma = (1/(self.eps + self.K_eps)) * (
+            self.eps * 2 * t.eye(self.n_state_attributes) +
             self.getMeanAdjustedTheta(top_thetas, theta_avg)
         )
+        self.sigma = new_sigma
+
+        return theta_avg
 
     def searchStep(self, env):
         N = 10
+        best_ret = 0.0
         theta_gains = []
         for k in range(self.K):
             theta_k = self.sampleTheta()
+            theta = self.theta
+            self.theta = theta_k
             returns = run_trial(self, env, N)
+            self.theta = theta
             theta_gains.append((theta_k, sum(returns)/N))
-        top_thetas = theta_gains.sort(key=lambda x: -x[1])[:self.K]
-        self.updateSigma(top_thetas)
+        print(sum([x[1] for x in theta_gains])/self.K)
+        theta_gains.sort(key=lambda x: -x[1])
+        top_thetas = [x[0] for x in theta_gains[:self.K_eps]]
+        theta_avg = self.updateSigma(top_thetas)
+        top_gains = [x[1] for x in theta_gains[:self.K_eps]]
+        if sum(top_gains)/self.K_eps > best_ret:
+            self.theta = theta_avg
+            best_ret = sum(top_gains)/self.K_eps
+
     
     def search(self, env, n_iters):
-        for _ in range(n_iters):
+        for i in range(n_iters):
+            print(f"iter {i+1}/{n_iters}")
             self.searchStep(env)
 
 
