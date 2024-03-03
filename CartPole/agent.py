@@ -88,6 +88,53 @@ class ParameterizedPolicyAgent(Agent):
         return results
 
 
+class CrossEntropyAgent(Agent):
+    def __init__(self, K, K_eps, eps, n_state_attributes=5):
+        self.K = K
+        self.eps = eps
+        self.K_eps = K_eps
+        self.theta = t.randn(n_state_attributes) # +1 for bias
+        self.sigma = 2*t.eye(self.theta.shape)
+
+    def getAction(self, state:State):
+        s = state.getTensor()
+        f_s = s * self.theta
+        pi_s = F.sigmoid(f_s)
+        return LEFT if pi_s < 0.5 else RIGHT
+
+    def sampleTheta(self):
+        return t.normal(self.theta, self.sigma)
+    
+    def getMeanAdjustedTheta(self, top_thetas, theta_avg):
+        meanAdjTheta = t.zeros_like(theta_avg.shape)
+        for theta in top_thetas:
+            meanAdjTheta += (theta - theta_avg) @ (theta - theta_avg).T
+        return meanAdjTheta
+
+    def updateSigma(self, top_thetas):
+        theta_avg = t.tensor(top_thetas).mean(dim=0)
+        assert theta_avg.shape == self.theta.shape
+        self.sigma = (1/(self.eps + self.K_eps)) * (
+            self.eps * 2 * t.eye(self.theta.shape) +
+            self.getMeanAdjustedTheta(top_thetas, theta_avg)
+        )
+
+    def searchStep(self, env):
+        N = 10
+        theta_gains = []
+        for k in range(self.K):
+            theta_k = self.sampleTheta()
+            returns = run_trial(self, env, N)
+            theta_gains.append((theta_k, sum(returns)/N))
+        top_thetas = theta_gains.sort(key=lambda x: -x[1])[:self.K]
+        self.updateSigma(top_thetas)
+    
+    def search(self, env, n_iters):
+        for _ in range(n_iters):
+            self.searchStep(env)
+
+
+
 def run_episode(agent, env):
     state, rew = env.reset()
     tot_return = rew
