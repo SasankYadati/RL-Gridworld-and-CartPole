@@ -131,27 +131,48 @@ class CrossEntropyAgent(Agent):
         N = 10
         best_ret = 0.0
         theta_gains = []
+        theta = self.theta
         for k in range(self.K):
             theta_k = self.sampleTheta()
-            theta = self.theta
             self.theta = theta_k
             returns = run_trial(self, env, N)
-            self.theta = theta
             theta_gains.append((theta_k, sum(returns)/N))
-        print(sum([x[1] for x in theta_gains])/self.K)
+        self.theta = theta
         theta_gains.sort(key=lambda x: -x[1])
         top_thetas = [x[0] for x in theta_gains[:self.K_eps]]
-        theta_avg = self.updateSigma(top_thetas)
         top_gains = [x[1] for x in theta_gains[:self.K_eps]]
-        if sum(top_gains)/self.K_eps > best_ret:
-            self.theta = theta_avg
-            best_ret = sum(top_gains)/self.K_eps
+        avg_top_theta = self.updateSigma(top_thetas)
+        avg_top_return = sum(top_gains)/self.K_eps
+        if avg_top_return > best_ret:
+            self.theta = avg_top_theta
+            best_ret = avg_top_return
+        return best_ret
 
     
     def search(self, env, n_iters):
+        results = []
+        best_ret = 0.0
         for i in range(n_iters):
             print(f"iter {i+1}/{n_iters}")
-            self.searchStep(env)
+            N = 10
+            theta_gains = []
+            theta = self.theta
+            for k in range(self.K):
+                theta_k = self.sampleTheta()
+                self.theta = theta_k
+                returns = run_trial(self, env, N)
+                theta_gains.append((theta_k, sum(returns)/N))
+            self.theta = theta
+            theta_gains.sort(key=lambda x: -x[1])
+            top_thetas = [x[0] for x in theta_gains[:self.K_eps]]
+            top_gains = [x[1] for x in theta_gains[:self.K_eps]]
+            avg_top_theta = self.updateSigma(top_thetas)
+            avg_top_return = sum(top_gains)/self.K_eps
+            if avg_top_return > best_ret:
+                self.theta = avg_top_theta
+                best_ret = avg_top_return
+            results.append({'iter':i, "return":best_ret})
+        return results
 
 
 
