@@ -29,6 +29,6 @@ Tried three different $\sigma$ values ```(0.1, 0.3, 0.9)```. $\sigma=0.9$ gives 
 ![Performance using various sigma](/CartPole/Parameterized%20Policy%20Search.png)
 
 ### Cross Entropy Method
-With $K=10$, $K_{\eps}=3$, $\eps=0.99$ converged to the optimal return of 1000 in about 80 iterations. At each iteration, we keep the best theta average of the top $K_{\eps}$ candidates.
+With $K=10$, $K_{\epsilon}=3$, $\epsilon=0.99$ converged to the optimal return of 1000 in about 80 iterations. At each iteration, we keep the best theta average of the top $K_{\epsilon}$ candidates.
 
 ![Learning curve for Cross Entropy Agent](/CartPole/Cross%20Entropy%20Agent.png)
